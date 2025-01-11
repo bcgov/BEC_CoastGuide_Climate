@@ -3,13 +3,7 @@ library(climr)
 library(ccissr)
 
 #historical climate for training points
-pts <- fread("//objectstore2.nrs.bcgov/ffec/BGC_models/WNA_v13_50-200filtpts_15Nov.csv")
-colnames(pts) <- c("id", "BGC", "lon", "lat", "elev") # rename column names to what climr expects
-sort(unique(pts$BGC))
-
-# subset units to lmh 
-bgcs <- as.vector(read.csv("inputs/units_LMH77.csv")$BGC)
-pts <- pts[BGC %in% bgcs]
+pts <- fread("inputs/pts_lmh77.csv")
 
 clim.pts <- downscale(xyz = pts,
                       which_refmap = "refmap_prism", 
@@ -45,4 +39,4 @@ setnames(summary_table, old = names(summary_table), new = new_colnames)
 setorder(summary_table, BGC)
 
 # View the resulting summary table
-write.csv(summary_table, "outputs/climate_summary_LMH77.csv")
+write.csv(summary_table, "outputs/climate_summary_LMH77.csv", row.names = F)
