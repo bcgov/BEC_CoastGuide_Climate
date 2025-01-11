@@ -1,15 +1,11 @@
 
 library(climr)
+library(terra)
+library(data.table)
 library(ccissr)
 
 #historical climate for training points
-pts <- fread("//objectstore2.nrs.bcgov/ffec/BGC_models/WNA_v13_50-200filtpts_15Nov.csv")
-colnames(pts) <- c("id", "BGC", "lon", "lat", "elev") # rename column names to what climr expects
-sort(unique(pts$BGC))
-
-# subset units to lmh 
-bgcs <- as.vector(read.csv("inputs/units_LMH77.csv")$BGC)
-pts <- pts[BGC %in% bgcs]
+pts <- fread("inputs/pts_lmh77.csv")
 
 elements_log = c("AHM", "DD", "Eref", "FFP", "NFFD", "PAS", "PPT", "SHM", "MSP")
 
@@ -31,7 +27,8 @@ vars <- c("elev", "MAT", "PPT", "CMD", "PAS", "TD")
 clim.pts.ref <- clim.pts.log[PERIOD=="1961_1990", ]
 clim.pts.ref <- merge(pts, clim.pts.ref, by = "id") # Merge the two datasets by 'id'
 clim.pts.ref <- clim.pts.ref[BGC != "CMAun"] # Remove the "CMAun" class
-bgc_order <- clim.pts.ref[, .(mean_MAT = mean(MAT, na.rm = TRUE)), by = BGC][order(-mean_MAT)]$BGC # Calculate the mean AHM for each BGC group and reorder the factor levels
+# bgc_order <- clim.pts.ref[, .(mean_MAT = mean(MAT, na.rm = TRUE)), by = BGC][order(-mean_MAT)]$BGC # Calculate the mean MAT for each BGC group and reorder the factor levels
+bgc_order <- sort(unique(clim.pts.ref$BGC)) # alphabetical order
 clim.pts.ref$BGC <- factor(clim.pts.ref$BGC, levels = bgc_order)
 
 # Calculate the median climate of the 1961_1990 period
@@ -80,27 +77,44 @@ par(mar=c(0.5, 4, 0.5, 1), mgp=c(2.75, 0.25, 0), tck=-0.01)
 
 var="MAT"
 for(var in vars){
-boxplot(get(var) ~ BGC, data = clim.pts.ref, 
-        main = "", 
-        range = 0,
-        yaxt = if(length(grep(var, elements_log))>0) "n" else "s",
-        xaxt = if(var==vars[length(vars)]) "s" else "n",
-        xlab = "", 
-        ylab = var,
-        ylim = range(c(clim.pts.ref[,get(var)], clim.pts.2021.median[,get(var)]), na.rm = T),
-        las = 2,           # Rotate x-axis labels for better visibility
-        col = bgc_colors # Set box color
-        ) # Set border color
-
+  boxplot(get(var) ~ BGC, data = clim.pts.ref, 
+          main = "", 
+          range = 0,
+          yaxt = if(length(grep(var, elements_log))>0) "n" else "s",
+          xaxt = if(var==vars[length(vars)]) "s" else "n",
+          xlab = "", 
+          ylab = var,
+          ylim = range(c(clim.pts.ref[,get(var)], clim.pts.2021.median[,get(var)]), na.rm = T),
+          las = 2,           # Rotate x-axis labels for better visibility
+          col = bgc_colors # Set box color
+  ) 
+  
+  # Add grid lines for better readability
+  grid(nx = NA, ny = NULL, col = "gray", lty = "dotted")
+  
+  # Redraw boxplots on top of grid lines
+  boxplot(get(var) ~ BGC, data = clim.pts.ref, 
+          add=T, 
+          main = "", 
+          range = 0,
+          yaxt = if(length(grep(var, elements_log))>0) "n" else "s",
+          xaxt = if(var==vars[length(vars)]) "s" else "n",
+          xlab = "", 
+          ylab = var,
+          ylim = range(c(clim.pts.ref[,get(var)], clim.pts.2021.median[,get(var)]), na.rm = T),
+          las = 2,           # Rotate x-axis labels for better visibility
+          border = "gray40", # Set border color
+          col = "gray" # Set box color
+  ) 
+  
   if(var==vars[1]) axis(3, at = 1:length(levels(clim.pts.ref$BGC)), labels = levels(clim.pts.ref$BGC), las=2)
   if(length(grep(var, elements_log))>0) axis(2, at=log2(2^seq(1,16)), labels=2^seq(1,16), las=2)
-    
+  
   if(var!="elev"){
-    points(clim.pts.obs.median[,get(var)])
+    # points(clim.pts.obs.median[,get(var)])
     points(clim.pts.2021.median[,get(var)], pch=16)
   }
   
-# Optional: Add grid lines for better readability
-grid(nx = NA, ny = NULL, col = "gray", lty = "dotted")
 }
+
 dev.off()
