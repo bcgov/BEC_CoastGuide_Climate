@@ -21,6 +21,7 @@ clim.pts <- downscale(xyz = pts,
 addVars(clim.pts)
 clim.pts.log <- logVars(clim.pts, elements = elements_log, base=2)
 
+vars <- c("elev", "PPT_MJ", "PPT_JAS", "DD5", "DDsub0", "SHM") # alternative variable set (for reviewers)
 vars <- c("elev", "MAT", "PPT", "CMD", "PAS", "TD")
 
 # extract out the reference period
