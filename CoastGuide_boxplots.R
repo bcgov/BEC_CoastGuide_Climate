@@ -22,7 +22,10 @@ addVars(clim.pts)
 clim.pts.log <- logVars(clim.pts, elements = elements_log, base=2)
 
 vars <- c("elev", "PPT_MJ", "PPT_JAS", "DD5", "DDsub0", "SHM") # alternative variable set (for reviewers)
-vars <- c("elev", "MAT", "PPT", "CMD", "PAS", "TD")
+vars <- c("elev", "MAT", "PPT", "PAS", "CMD", "TD")
+
+data("variables")
+var.names <- c("Elevation (m)", "Mean annual\ntemperature (\u00b0C)", "Annual\nprecipitation (mm)", "Precipitation\nas snow (mm)", "Climatic moisture\ndeficit (mm)", "Continentality (\u00b0C)")
 
 # extract out the reference period
 clim.pts.ref <- clim.pts.log[PERIOD=="1961_1990", ]
@@ -71,10 +74,11 @@ bgc_colors <- color_map[levels(clim.pts.ref$BGC)]
 
 # Create a boxplot of AHM grouped by BGC with reordered groups
 png(filename=paste("plots\\CoastGuide.boxplots.png",sep="."), type="cairo", units="in", width=6.5, height=7, pointsize=12, res=600)
+pdf(file=paste("plots/CoastGuide.boxplots.pdf",sep="."), width=6.5, height=7, pointsize=12)
 mat <- matrix(c(7,1,2,3,4,5,6,8), 8) 
 layout(mat, heights = c(0.5, rep(1, times=6), 0.5))
 
-par(mar=c(0.5, 4, 0.5, 1), mgp=c(2.75, 0.25, 0), tck=-0.01)
+par(mar=c(0.5, 5, 0.5, 1), mgp=c(2.75, 0.25, 0), tck=-0.01)
 
 var="MAT"
 for(var in vars){
@@ -84,7 +88,7 @@ for(var in vars){
           yaxt = if(length(grep(var, elements_log))>0) "n" else "s",
           xaxt = if(var==vars[length(vars)]) "s" else "n",
           xlab = "", 
-          ylab = var,
+          ylab = var.names[which(vars==var)],
           ylim = range(c(clim.pts.ref[,get(var)], clim.pts.2021.median[,get(var)]), na.rm = T),
           las = 2,           # Rotate x-axis labels for better visibility
           col = bgc_colors # Set box color
@@ -101,7 +105,7 @@ for(var in vars){
           yaxt = if(length(grep(var, elements_log))>0) "n" else "s",
           xaxt = if(var==vars[length(vars)]) "s" else "n",
           xlab = "", 
-          ylab = var,
+          ylab = var.names[which(vars==var)],
           ylim = range(c(clim.pts.ref[,get(var)], clim.pts.2021.median[,get(var)]), na.rm = T),
           las = 2,           # Rotate x-axis labels for better visibility
           border = "gray40", # Set border color
@@ -109,7 +113,10 @@ for(var in vars){
   ) 
   
   if(var==vars[1]) axis(3, at = 1:length(levels(clim.pts.ref$BGC)), labels = levels(clim.pts.ref$BGC), las=2)
-  if(length(grep(var, elements_log))>0) axis(2, at=log2(2^seq(1,16)), labels=2^seq(1,16), las=2)
+  if(length(grep(var, elements_log))>0){ 
+    sequence <- if(var=="PAS") seq(2,16, 2) else seq(1,16)
+    axis(2, at=log2(2^sequence), labels=2^sequence, las=2)
+  }
   
   if(var!="elev"){
     # points(clim.pts.obs.median[,get(var)])

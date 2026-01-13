@@ -1,5 +1,5 @@
 
-remotes::install_github("bcgov/climr@devl")
+# remotes::install_github("bcgov/climr@devl")
 
 library(terra)
 library(data.table)
@@ -14,7 +14,53 @@ elements <- c("Tmin", "Tmax", "Pr")
 element.names <- c("Tmin (\u00b0C)", "Tmax (\u00b0C)", "precipitation (mm)")
 
 studyarea.bc <- ext(c(-132, -120.3, 48, 55))
-plot(studyarea.bc, add=T)
+
+###########################
+## land mask
+###########################
+
+# Define the bounding box for the region of interest
+lat_min <- 46
+lat_max <- 60
+lon_min <- -145
+lon_max <- -120
+
+# Load high-resolution land polygons
+land <- ne_download(scale = "large", type = "land", category = "physical", returnclass = "sf")
+
+# Convert land polygons to terra vectors (this step is necessary to work with terra)
+land_terra <- vect(land)
+
+# Define the bounding box as a terra vector (polygon)
+bbox <- ext(lon_min, lon_max, lat_min, lat_max)
+bbox_poly <- vect(bbox, crs = "EPSG:4326")  # EPSG:4326 for WGS 84 (latitude/longitude)
+
+# Crop the land polygons to the bounding box area
+land_cropped <- crop(land_terra, bbox_poly)
+
+# Check if land_cropped is valid (should not be empty)
+print(land_cropped)
+
+# Create the land mask by merging (union) the land polygons in the cropped area
+land_mask <- union(land_cropped)
+
+# Check if land_mask is valid (should not be empty)
+print(land_mask)
+
+# Ensure both geometries are in the same CRS
+if (crs(land_mask) != crs(bbox_poly)) {
+  land_mask <- project(land_mask, crs(bbox_poly))
+}
+
+# Check the CRS of both geometries after projection
+print(crs(land_mask))
+print(crs(bbox_poly))
+
+# Create the ocean mask by subtracting the land mask from the bounding box using setdiff
+ocean_mask <- erase(bbox_poly, land_mask)
+
+# Check the ocean_mask result
+plot(ocean_mask)
 
 ###########################
 ## PRISM data
@@ -58,12 +104,14 @@ values(X)[which(values(X)<lim_lower)] <- lim_lower
 inc=0.05
 breaks=seq(min(values(X), na.rm = T)-inc, max(values(X), na.rm = T)+inc, inc)
 ColScheme <- colorRampPalette(rev(brewer.pal(11, "RdYlBu")))(length(breaks)-1)
+ColScheme <- colorRampPalette(brewer.pal(11, "Greys"))(length(breaks)-1)
 
 
-png(filename=paste("plots/CoastGuide.map", var, "png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
+png(filename=paste("plots/CoastGuide.map", var, ".greyscale.png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
+# pdf(file=paste("plots/CoastGuide.map", var, "greyscale.pdf",sep="."), width=6.5, height=6.25, pointsize=10)
 par(mfrow=c(1,1), mar=c(0,0,0,0))
 image(X, col=ColScheme, breaks=breaks, axes=F)
-plot(ocean.bc, add=T, col="white")
+plot(ocean_mask, add=T, col="white", border=F)
 rect(-140, 51.5, -130.9, 54.2, col="white", border = NA)
 legend_ramp(X, title = "Mean annual Temperature (\u00b0C)", ColScheme = ColScheme, breaks = breaks, pos=c(0.08, 0.1, 0.325, 0.65), log = NULL, horizontal = FALSE, title.height = 1)
 box()

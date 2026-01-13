@@ -6,6 +6,7 @@ library(data.table)
 library(RColorBrewer)
 library(scales)
 library(rnaturalearth)
+library(rnaturalearthhires)
 library(bcmaps)
 library(climr)
 
@@ -14,7 +15,53 @@ elements <- c("Tmin", "Tmax", "Pr")
 element.names <- c("Tmin (\u00b0C)", "Tmax (\u00b0C)", "precipitation (mm)")
 
 studyarea.bc <- ext(c(-132, -120.3, 48, 55))
-plot(studyarea.bc, add=T)
+
+###########################
+## land mask
+###########################
+
+# Define the bounding box for the region of interest
+lat_min <- 46
+lat_max <- 60
+lon_min <- -145
+lon_max <- -120
+
+# Load high-resolution land polygons
+land <- ne_download(scale = "large", type = "land", category = "physical", returnclass = "sf")
+
+# Convert land polygons to terra vectors (this step is necessary to work with terra)
+land_terra <- vect(land)
+
+# Define the bounding box as a terra vector (polygon)
+bbox <- ext(lon_min, lon_max, lat_min, lat_max)
+bbox_poly <- vect(bbox, crs = "EPSG:4326")  # EPSG:4326 for WGS 84 (latitude/longitude)
+
+# Crop the land polygons to the bounding box area
+land_cropped <- crop(land_terra, bbox_poly)
+
+# Check if land_cropped is valid (should not be empty)
+print(land_cropped)
+
+# Create the land mask by merging (union) the land polygons in the cropped area
+land_mask <- union(land_cropped)
+
+# Check if land_mask is valid (should not be empty)
+print(land_mask)
+
+# Ensure both geometries are in the same CRS
+if (crs(land_mask) != crs(bbox_poly)) {
+  land_mask <- project(land_mask, crs(bbox_poly))
+}
+
+# Check the CRS of both geometries after projection
+print(crs(land_mask))
+print(crs(bbox_poly))
+
+# Create the ocean mask by subtracting the land mask from the bounding box using setdiff
+ocean_mask <- erase(bbox_poly, land_mask)
+
+# Check the ocean_mask result
+plot(ocean_mask)
 
 ###########################
 ## PRISM data
@@ -51,12 +98,11 @@ dem.noram <- project(dem.noram, crs(dem.bc)) #project 250m source dem to the stu
 ocean.bc <- crop(dem.noram, studyarea.bc)
 values(ocean.bc)[!is.finite(values(ocean.bc))] <- -99
 values(ocean.bc)[values(ocean.bc)> -99] <- NA
+land.bc <- dem.noram
+values(land.bc)[!is.finite(values(land.bc))] <- NA
+values(land.bc)[is.finite(values(land.bc))] <- 1
 
-# Calculate hillshade
-slope.bc <- terrain(dem.bc)
-aspect.bc <- terrain(dem.bc)
-hill.bc <- shade(slope.bc, aspect.bc, angle = 45, direction = 315)
-hill.bc <- mask(hill.bc, land.bc)
+
 
 # coastline
 bdy.bc <- vect(bc_bound_hres())
@@ -71,21 +117,23 @@ X <- prism.annual
 values(X) <- log2(values(X))
 values(X)[!is.finite(values(X))] <- NA
 X <- crop(X, studyarea.bc)
-X.all <- mask(X, land.bc)
-lim_upper <- quantile(values(X.all, na.rm=T), 0.99)
-lim_lower <- quantile(values(X.all, na.rm=T), 0.05)
+lim_upper <- quantile(values(X, na.rm=T), 0.995)
+lim_lower <- quantile(values(X, na.rm=T), 0.15)
 values(X)[which(values(X)>lim_upper)] <- lim_upper
 values(X)[which(values(X)<lim_lower)] <- lim_lower
 
 inc=0.05
 breaks=seq(min(values(X), na.rm = T)-inc, max(values(X), na.rm = T)+inc, inc)
-ColScheme <- colorRampPalette(brewer.pal(9,"YlGnBu"))(length(breaks)-1)
+# ColScheme <- colorRampPalette(brewer.pal(9,"YlGnBu"))(length(breaks)-1)
+# ColScheme <- colorRampPalette(rev(brewer.pal(11, "Greys")))(length(breaks)-1)
+ColScheme <- colorRampPalette(brewer.pal(11, "Greys"))(length(breaks)-1)
 
 
-png(filename=paste("plots/CoastGuide.map", var, "png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
+png(filename=paste("plots/CoastGuide.map", var, "greyscale.png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
+pdf(file=paste("plots/CoastGuide.map", var, "greyscale.pdf",sep="."), width=6.5, height=6.25, pointsize=10)
 par(mfrow=c(1,1), mar=c(0,0,0,0))
 image(X, col=ColScheme, breaks=breaks, axes=F)
-plot(ocean.bc, add=T, col="white")
+plot(ocean_mask, add=T, col="white", lwd=0.4)
 rect(-140, 51.5, -130.9, 54.2, col="white", border = NA)
 legend_ramp(X, title = "Annual Precipitation (mm)", ColScheme = ColScheme, breaks = breaks, pos=c(0.08, 0.1, 0.325, 0.65), log = 2, horizontal = FALSE, title.height = 1)
 box()
@@ -116,14 +164,11 @@ for(i in 1:2){
   
   ## DEM
   
-  land <- crop(land.bc, studyarea)
   dem <- crop(dem.bc, studyarea)
-  slope =  crop(slope.bc, studyarea)
-  aspect =  crop(aspect.bc, studyarea)
-  hill =  crop(hill.bc, studyarea)
   prism <- crop(prism.annual, studyarea)
   bdy <- crop(bdy.bc, studyarea)
   
+  # land <- project(land.bc, dem)
   dem <- mask(dem, land)
   
   #################################
