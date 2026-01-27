@@ -88,7 +88,7 @@ colnames(grid) <- c("id", "lon", "lat", "elev") # rename column names to what cl
 clim <- downscale(grid, which_refmap = "refmap_climr", vars = list_vars())
 
 #######################
-## Key Map
+## Map
 #######################
 
 var <- "MAT"
@@ -107,8 +107,8 @@ ColScheme <- colorRampPalette(rev(brewer.pal(11, "RdYlBu")))(length(breaks)-1)
 ColScheme <- colorRampPalette(brewer.pal(11, "Greys"))(length(breaks)-1)
 
 
-png(filename=paste("plots/CoastGuide.map", var, "greyscale.png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
-# pdf(file=paste("plots/CoastGuide.map", var, "greyscale.pdf",sep="."), width=6.5, height=6.25, pointsize=10)
+# png(filename=paste("plots/CoastGuide.map", var, "greyscale.png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
+pdf(file=paste("plots/CoastGuide.map", var, "greyscale.pdf",sep="."), width=6.5, height=6.25, pointsize=10)
 par(mfrow=c(1,1), mar=c(0,0,0,0))
 image(X, col=ColScheme, breaks=breaks, axes=F)
 plot(ocean_mask, add=T, col="white", border=F)
@@ -197,7 +197,7 @@ for(i in 1:2){
   dem <- crop(dem.bc, transect)
 
   #################################
-  ## Precipitation plot
+  ## climate plot
   #################################
   row <- 6
   rowlat <- yFromRow(dem, row)
@@ -222,7 +222,7 @@ for(i in 1:2){
   var1 <- "Tave_01"
   var2 <- "Tave_07"
 
-    x0 <- crop(X, transect)
+  x0 <- crop(X, transect)
   X1 <- X2 <- dem.bc
   X1[clim[, id]] <- clim[, get(var1)] 
   X2[clim[, id]] <- clim[, get(var2)] 
@@ -249,9 +249,12 @@ for(i in 1:2){
 
   polygon(c(xvals, length(y.dem), 1), c(y.dem, 0, 0), col="gray", border=F)
   yvals1 <- (values(crop(x1, row_extent))-shiftFactor)*scaleFactor
+  mask <- if(i==1) 60 else 120 # temporary fix for a climr bug in the ocean fill
+  yvals1[1:mask] <- NA
   lines(xvals, yvals1, col="grey30", lwd=1)
   text(min(which(is.finite(yvals1)))+10, yvals1[min(which(is.finite(yvals1)))], "January", pos=2, cex=0.8)
   yvals2 <- (values(crop(x2, row_extent))-shiftFactor)*scaleFactor
+  yvals2[1:mask] <- NA
   lines(xvals, yvals2, col="grey50", lwd=2)
   text(min(which(is.finite(yvals2)))+10, yvals2[min(which(is.finite(yvals2)))], "July", pos=2, cex=0.8)
   

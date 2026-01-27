@@ -129,8 +129,8 @@ breaks=seq(min(values(X), na.rm = T)-inc, max(values(X), na.rm = T)+inc, inc)
 ColScheme <- colorRampPalette(brewer.pal(11, "Greys"))(length(breaks)-1)
 
 
-png(filename=paste("plots/CoastGuide.map", var, "greyscale.png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
-# pdf(file=paste("plots/CoastGuide.map", var, "greyscale.pdf",sep="."), width=6.5, height=6.25, pointsize=10)
+# png(filename=paste("plots/CoastGuide.map", var, "greyscale.png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
+pdf(file=paste("plots/CoastGuide.map", var, "greyscale.pdf",sep="."), width=6.5, height=6.25, pointsize=10)
 par(mfrow=c(1,1), mar=c(0,0,0,0))
 image(X, col=ColScheme, breaks=breaks, axes=F)
 plot(ocean_mask, add=T, col="white", lwd=0.4)
