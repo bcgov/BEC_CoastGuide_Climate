@@ -130,12 +130,12 @@ ColScheme <- colorRampPalette(brewer.pal(11, "Greys"))(length(breaks)-1)
 
 
 png(filename=paste("plots/CoastGuide.map", var, "greyscale.png",sep="."), type="cairo", units="in", width=6.5, height=6.25, pointsize=10, res=600)
-pdf(file=paste("plots/CoastGuide.map", var, "greyscale.pdf",sep="."), width=6.5, height=6.25, pointsize=10)
+# pdf(file=paste("plots/CoastGuide.map", var, "greyscale.pdf",sep="."), width=6.5, height=6.25, pointsize=10)
 par(mfrow=c(1,1), mar=c(0,0,0,0))
 image(X, col=ColScheme, breaks=breaks, axes=F)
 plot(ocean_mask, add=T, col="white", lwd=0.4)
 rect(-140, 51.5, -130.9, 54.2, col="white", border = NA)
-legend_ramp(X, title = "Annual Precipitation (mm)", ColScheme = ColScheme, breaks = breaks, pos=c(0.08, 0.1, 0.325, 0.65), log = 2, horizontal = FALSE, title.height = 1)
+legend_ramp(X, title = "Annual Precipitation (mm)", ColScheme = ColScheme, breaks = breaks, pos=c(0.08, 0.1, 0.325, 0.65), log = 2, horizontal = FALSE, title.height = 6)
 box()
 
 regions <- c("NCBC", "SCBC")
@@ -150,6 +150,61 @@ for(i in 1:2){
 }
 box()
 # dev.off()
+
+
+# -----------------------
+# North Arrow
+
+usr <- ext(X)
+
+x0 <- usr[1] + 0.065 * diff(usr[1:2])
+y0 <- usr[3] + 0.8 * diff(usr[3:4])
+
+arrows(
+  x0, y0,
+  x0, y0 + 0.095 * diff(usr[3:4]),
+  lwd = 2,
+  length = 0.1
+)
+
+text(
+  x0, y0 + 0.115 * diff(usr[3:4]),
+  "N",
+  cex = 1.2,
+  font = 2
+)
+
+# -----------------------
+# Scale Bar
+
+# km per degree latitude
+km_per_deg_lat <- 111.32
+
+# scale bar length (km)
+km_len <- 100
+deg_len <- km_len / km_per_deg_lat
+
+usr <- ext(X)
+
+# top-left placement
+x0 <- usr[1] + 0.035 * diff(usr[1:2])
+y0 <- usr[3] + 0.8 * diff(usr[3:4])
+
+# main bar
+segments(
+  x0, y0,
+  x0, y0 + deg_len,
+  lwd = 2
+)
+
+# end ticks
+tick_width <- 0.01 * diff(usr[1:2])
+
+segments(x0 - tick_width, y0, x0 + tick_width, y0)
+segments(x0 - tick_width, y0 + deg_len, x0 + tick_width, y0 + deg_len)
+
+# label
+text(x0 - 1.8 * tick_width, y0 + deg_len/2, paste0(km_len, " km"), cex = 0.9, srt=90)
 
 #======================================
 #======================================
